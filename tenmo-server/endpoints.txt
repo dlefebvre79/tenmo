@@ -1,0 +1,20 @@
+TEnmo endpoints
+
+pre-configured in starter code:
+POST
+/login						pass JSON body with "username" and "password", returns token
+/register					pass JSON body with "username" and "password"
+
+
+Following endpoints all require bearer token in header
+GET:
+/users						returns List<User> of all registered users
+/users/balance				returns BigDecimal value of account balance for current user
+/users/balance/{id}			returns BigDecimal value of account balance for user {id}
+/users/transfers/{id}		returns List<Transfer> of all transfers involving user {id}
+
+/transfers					returns List<Transfer> of current user's transfer history
+/transfers/{id}				returns Transfer object by {id}
+
+POST:
+/transfers					passes Transfer object, creates new transfer (must include current user as from/to)
