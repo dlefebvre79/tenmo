@@ -8,6 +8,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -42,14 +43,24 @@ public class TransferController
 		return transferDao.get(id);
 	}
 	
+	@PutMapping("/update/{id}")
+	public Transfer updateTransfer(@RequestBody Transfer transfer, Principal principal, @PathVariable int id)
+	{
+		Transfer updatedTransfer = new Transfer();
+		
+		if(isValidUser(transfer, principal))
+		{
+			updatedTransfer = transferDao.update(transfer);
+		}
+		return updatedTransfer;
+	}
+	
 	@PostMapping()
 	public Transfer createTransfer(@RequestBody Transfer transfer, Principal principal)
 	{
 		Transfer newTransfer = new Transfer();
-		String principalName = principal.getName();
 		
-		if(principalName.equalsIgnoreCase(transfer.getUserFrom()) ||
-				principalName.equalsIgnoreCase(transfer.getUserTo()))
+		if(isValidUser(transfer, principal))
 		{
 			newTransfer = transferDao.create(transfer);	
 		}
@@ -57,4 +68,13 @@ public class TransferController
 		return newTransfer;
 	}
 	
+	private boolean isValidUser(Transfer transfer, Principal principal)
+	{
+		if(principal.getName().equalsIgnoreCase(transfer.getUserFrom()) ||
+				principal.getName().equalsIgnoreCase(transfer.getUserTo()))
+		{
+			return true;
+		}
+		return false;
+	}
 }

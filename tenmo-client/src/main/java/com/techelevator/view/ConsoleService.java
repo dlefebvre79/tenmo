@@ -168,7 +168,43 @@ public class ConsoleService
 	
 		
 	}
+
+	public void displayPendingTransfers(List<Transfer> transfers)
+	{
+		out.println();
+		out.println();
+		out.println(String.format("%50s", "").replace(' ', '-'));
+		out.println("Pending Transfers");
+		out.println(String.format("%-12s%-26s%12s", "ID", "To", "Amount "));
+		out.println(String.format("%50s", "").replace(' ', '-'));
+		
+		for (Transfer transfer : transfers)
+		{
+			String name = transfer.getUserTo();
+			String amount = transfer.getAmount().toString();
+			
+//			if(from.equalsIgnoreCase(username))
+//			{
+//				fromTo = "To:";
+//				name = to;
+//			}
+			out.println(String.format("%-12d"	// Transfer ID
+									+ "%-26s"	// Name
+									+ "%-2s"	// $
+									+ "%10s"	// Amount
+									, transfer.getId()
+									, name
+									, "$ "
+									, amount));
+		}
+		
+		out.println(String.format("%50s", "").replace(' ', '-'));
+		out.println();
+		out.flush();
 	
+		
+	}
+
 	public void displayTransferDetails(Transfer transfer)
 	{
 		out.println();

@@ -17,6 +17,8 @@ public class App
 {
 
 	private static final String API_BASE_URL = "http://localhost:8080/";
+	private static final String STATUS_APPROVED = "Approved";
+	private static final String STATUS_REJECTED = "Rejected";
 
 	private static final String MENU_OPTION_EXIT = "Exit";
 	private static final String LOGIN_MENU_OPTION_REGISTER = "Register";
@@ -29,9 +31,14 @@ public class App
 	private static final String MAIN_MENU_OPTION_REQUEST_BUCKS = "Request TE bucks";
 	private static final String MAIN_MENU_OPTION_VIEW_PENDING_REQUESTS = "View your pending requests";
 	private static final String MAIN_MENU_OPTION_LOGIN = "Login as different user";
+	private static final String PENDING_REQUESTS_OPTION_APPROVE = "Approve";
+	private static final String PENDING_REQUESTS_OPTION_REJECT = "Reject";
+	private static final String PENDING_REQUESTS_OPTION_CANCEL = "Don't approve or reject";
 	private static final String[] MAIN_MENU_OPTIONS = { MAIN_MENU_OPTION_VIEW_BALANCE, MAIN_MENU_OPTION_SEND_BUCKS,
 			MAIN_MENU_OPTION_VIEW_PAST_TRANSFERS, MAIN_MENU_OPTION_REQUEST_BUCKS,
 			MAIN_MENU_OPTION_VIEW_PENDING_REQUESTS, MAIN_MENU_OPTION_LOGIN, MENU_OPTION_EXIT };
+	private static final String[] PENDING_REQUESTS_MENU_OPTIONS = { PENDING_REQUESTS_OPTION_APPROVE, 
+			PENDING_REQUESTS_OPTION_REJECT, PENDING_REQUESTS_OPTION_CANCEL };
 
 	private AuthenticatedUser currentUser;
 	private ConsoleService console;
@@ -121,8 +128,29 @@ public class App
 	
 	private void viewPendingRequests()
 	{
-		// TODO Auto-generated method stub
-
+		List<Transfer> transfers = transferService.getPendingTransfers();
+		Transfer transferToUpdate = null;
+		console.displayPendingTransfers(transfers);
+		int selection = console.getUserInputInteger("Please enter transfer ID to view approve/reject (0 to cancel)");
+		if(selection !=0)
+		{
+			transferToUpdate = transferService.getById(selection);
+			String choice = (String) console.getChoiceFromOptions(PENDING_REQUESTS_MENU_OPTIONS);
+			if (!PENDING_REQUESTS_OPTION_CANCEL.equals(choice))
+			{
+				if (PENDING_REQUESTS_OPTION_APPROVE.equals(choice))
+				{
+					transferToUpdate.setTransferStatus(STATUS_APPROVED);
+					transferService.updateTransfer(transferToUpdate);
+				}
+				else if (PENDING_REQUESTS_OPTION_REJECT.equals(choice))
+				{
+					transferToUpdate.setTransferStatus(STATUS_REJECTED);
+					transferService.updateTransfer(transferToUpdate);
+				}
+			}
+			//PENDING_REQUESTS_OPTION_APPROVE, PENDING_REQUESTS_OPTION_REJECT, 
+		}
 	}
 
 	private void sendBucks()
@@ -150,7 +178,7 @@ public class App
 					transfer.setAmount(new BigDecimal(console.getUserInput("Enter amount")));
 					transfer.setTransferStatus("Approved");
 					transfer.setTransferType("Send");
-					transferService.sendBucks(transfer);
+					transferService.createTransfer(transfer);
 					break;
 				}
 			}
@@ -159,8 +187,30 @@ public class App
 
 	private void requestBucks()
 	{
-		// TODO Auto-generated method stub
-
+		int requestFrom;
+		
+		Transfer transfer = new Transfer();
+		transfer.setUserTo(currentUser.getUser().getUsername());
+		
+		List<User> users = userService.getAllUsers();
+		console.displayUsers(users);
+		
+		requestFrom = console.getUserInputInteger("Enter ID of user you are requesting from (0 to cancel)");
+		if(requestFrom != 0)
+		{
+			for (User user : users)
+			{
+				if(user.getId() == requestFrom)
+				{
+					transfer.setUserFrom(user.getUsername());
+					transfer.setAmount(new BigDecimal(console.getUserInput("Enter amount")));
+					transfer.setTransferStatus("Pending");
+					transfer.setTransferType("Request");
+					transferService.createTransfer(transfer);
+					break;
+				}
+			}
+		}
 	}
 
 	private void exitProgram()

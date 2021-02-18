@@ -20,6 +20,7 @@ public class TransferSqlDAO implements TransferDAO
 	@Autowired
 	private UserSqlDAO userDao;
 	
+	@Override
 	public Transfer get(int id) throws TransferNotFoundException
 	{
 		Transfer transfer = new Transfer();
@@ -57,6 +58,7 @@ public class TransferSqlDAO implements TransferDAO
 		throw new TransferNotFoundException();
 	}
 	
+	@Override
 	public Transfer create(Transfer transfer) throws InsufficientFundsException
 	{
 		int userFrom = userDao.findIdByUsername(transfer.getUserFrom());
@@ -70,7 +72,35 @@ public class TransferSqlDAO implements TransferDAO
 		BigDecimal startBalanceTo = userDao.getBalanceById(userTo);
 		Transfer newTransfer = null;
 		
-		if(startBalanceFrom.compareTo(amount) >= 0)
+		if(transfer.getTransferType().equalsIgnoreCase("send"))
+		{
+			if(startBalanceFrom.compareTo(amount) >= 0)
+			{
+				int transferId = getNextId();
+				String sql = "INSERT INTO transfers "
+							+ "(transfer_id"
+							+ ", transfer_type_id"
+							+ ", transfer_status_id"
+							+ ", account_from"
+							+ ", account_to"
+							+ ", amount) "
+							+ "VALUES "
+							+ "(?, ?, ?, ?, ?, ?);";
+				
+				jdbcTemplate.update(sql, transferId, transferType, transferStatus,
+										accountFrom, accountTo, amount);
+				
+				userDao.updateBalance(userFrom, startBalanceFrom.subtract(amount));
+				userDao.updateBalance(userTo, startBalanceTo.add(amount));
+				
+				newTransfer = get(transferId);
+			}
+			else
+			{
+				throw new InsufficientFundsException();
+			}
+		}
+		else if(transfer.getTransferType().equalsIgnoreCase("request"))
 		{
 			int transferId = getNextId();
 			String sql = "INSERT INTO transfers "
@@ -86,17 +116,58 @@ public class TransferSqlDAO implements TransferDAO
 			jdbcTemplate.update(sql, transferId, transferType, transferStatus,
 									accountFrom, accountTo, amount);
 			
-			userDao.updateBalance(userFrom, startBalanceFrom.subtract(amount));
-			userDao.updateBalance(userTo, startBalanceTo.add(amount));
-			
 			newTransfer = get(transferId);
-			return newTransfer;	
 		}
-		throw new InsufficientFundsException();
+		return newTransfer;	
 		
 	}
+
+	@Override
+	public Transfer update(Transfer transfer) throws InsufficientFundsException
+	{
+		int transferId = transfer.getId();
+		int userFrom = userDao.findIdByUsername(transfer.getUserFrom());
+		int userTo = userDao.findIdByUsername(transfer.getUserTo());
+		int transferType = getTypeId(transfer.getTransferType());
+		int transferStatus = getStatusId(transfer.getTransferStatus());
+		BigDecimal amount = transfer.getAmount();
+		BigDecimal startBalanceFrom = userDao.getBalanceById(userFrom);
+		BigDecimal startBalanceTo = userDao.getBalanceById(userTo);
+		Transfer updatedTransfer = null;
+		
+		if(transfer.getTransferStatus().equalsIgnoreCase("approved"))
+		{
+			if(startBalanceFrom.compareTo(amount) >= 0)
+			{
+				updateTransferStatus(transferId, transferStatus);
+				userDao.updateBalance(userFrom, startBalanceFrom.subtract(amount));
+				userDao.updateBalance(userTo, startBalanceTo.add(amount));
+				updatedTransfer = get(transferId);
+			}
+			else
+			{
+				throw new InsufficientFundsException();
+			}
+		}
+		else if (transfer.getTransferStatus().equalsIgnoreCase("rejected"))
+		{
+			updateTransferStatus(transferId, transferStatus);
+			updatedTransfer = get(transferId);
+		}
+		return updatedTransfer;	
+
+	}
 	
-	private int getStatusId(String status)
+	private void updateTransferStatus(int transferId, int statusId)
+	{
+		String sql = "UPDATE transfers "
+				+ "SET transfer_status_id = ? "
+				+ "WHERE transfer_id = ?;";
+	
+		jdbcTemplate.update(sql, statusId, transferId);
+	}
+	
+ 	private int getStatusId(String status)
 	{
 		int id = -1;
 		

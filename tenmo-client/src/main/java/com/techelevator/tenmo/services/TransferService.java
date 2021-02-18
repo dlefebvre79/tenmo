@@ -1,5 +1,6 @@
 package com.techelevator.tenmo.services;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -30,7 +31,7 @@ public class TransferService
 		this.user = user;
 	}
 	
-	public Transfer sendBucks(Transfer transfer)
+	public Transfer createTransfer(Transfer transfer)
 	{
 		Transfer newTransfer = null;
 		if(this.user !=null)
@@ -47,7 +48,25 @@ public class TransferService
 		}
 		return newTransfer;
 	}
-	
+
+	public Transfer updateTransfer(Transfer transfer)
+	{
+		Transfer updatedTransfer = null;
+		if(this.user !=null)
+		{
+			try
+			{
+			updatedTransfer = restTemplate.exchange(BASE_URL + "/update/" + transfer.getId(), HttpMethod.PUT,
+					makeTransferEntity(transfer), Transfer.class).getBody();
+			}
+			catch (RestClientResponseException e)
+			{
+				
+			}
+		}
+		return updatedTransfer;
+	}
+
 	public List<Transfer> getAllTransfers()
 	{
 		List<Transfer> transfers = null;
@@ -67,6 +86,35 @@ public class TransferService
 		return transfers;
 	}
 
+	public List<Transfer> getPendingTransfers()
+	{
+		List<Transfer> transfers = null;
+		List<Transfer> pending = new ArrayList<Transfer>();
+		if(this.user !=null)
+		{
+			try
+			{
+				Transfer[] transferArray = restTemplate.exchange(BASE_URL, HttpMethod.GET,
+						makeAuthEntity(), Transfer[].class).getBody();
+				transfers = Arrays.asList(transferArray);
+				for (Transfer transfer : transfers)
+				{
+					if(transfer.getTransferStatus().equalsIgnoreCase("pending")
+							&& transfer.getUserFrom().equalsIgnoreCase(this.user.getUser().getUsername()))
+					{
+						pending.add(transfer);
+					}
+				}
+			}
+			catch (RestClientResponseException e)
+			{
+				
+			}
+		}
+		return pending;
+	}
+
+	
 	public Transfer getById(int id)
 	{
 		Transfer transfer = null;
